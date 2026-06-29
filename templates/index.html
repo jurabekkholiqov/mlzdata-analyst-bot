@@ -1,0 +1,1889 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MlzData - Admin Dashboard</title>
+    <meta name="description" content="MlzData Telegram Boti boshqaruv paneli. Foydalanuvchilar va obunalarni boshqarish tizimi.">
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: rgba(17, 24, 39, 0.7);
+            --primary-glow: linear-gradient(135deg, #6366f1, #a855f7);
+            --text-color: #f3f4f6;
+            --muted-text: #9ca3af;
+            --border-color: rgba(255, 255, 255, 0.08);
+            --input-bg: rgba(255, 255, 255, 0.05);
+            --accent-glow: rgba(99, 102, 241, 0.15);
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --info-color: #3b82f6;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /* Abstract glowing blobs */
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(120px);
+            z-index: -1;
+            opacity: 0.3;
+        }
+
+        .blob-1 {
+            width: 400px;
+            height: 400px;
+            background: #6366f1;
+            top: -100px;
+            left: -100px;
+        }
+
+        .blob-2 {
+            width: 500px;
+            height: 500px;
+            background: #a855f7;
+            bottom: -150px;
+            right: -150px;
+        }
+
+        /* Header Navbar */
+        .navbar {
+            background: rgba(17, 24, 39, 0.8);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 16px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .logo-group {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-text {
+            font-size: 1.6rem;
+            font-weight: 700;
+            background: var(--primary-glow);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+
+        .badge-live {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success-color);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            text-transform: uppercase;
+        }
+
+        .btn-logout {
+            padding: 8px 16px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+            border-radius: 8px;
+            color: #f87171;
+            font-weight: 500;
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+        }
+
+        .btn-logout:hover {
+            background: rgba(239, 68, 68, 0.2);
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+            position: relative;
+        }
+
+        /* Metrics Row */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+
+        .metric-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            transition: transform 0.3s ease, border-color 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-4px);
+            border-color: rgba(99, 102, 241, 0.3);
+        }
+
+        .metric-card-clickable {
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+        .metric-card-clickable:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+            filter: brightness(1.2);
+        }
+        .metric-card-clickable.active-filter {
+            outline: 2px solid white;
+            outline-offset: 1px;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+        }
+
+        .metric-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--muted-text);
+            font-size: 0.85rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .metric-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--text-color);
+        }
+
+        .metric-card.primary { border-left: 4px solid #6366f1; }
+        .metric-card.success { border-left: 4px solid #10b981; }
+        .metric-card.warning { border-left: 4px solid #f59e0b; }
+        .metric-card.info { border-left: 4px solid #3b82f6; }
+
+        /* Dashboard Body Card */
+        .dashboard-body {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .body-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .body-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+        }
+
+        /* Controls: Search and Filters */
+        .controls-row {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            width: 100%;
+        }
+
+        .search-wrapper {
+            flex: 1;
+            min-width: 280px;
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-color);
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        .search-input:focus {
+            border-color: #6366f1;
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .filter-select {
+            padding: 12px 16px;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            color: var(--text-color);
+            font-size: 0.95rem;
+            outline: none;
+            cursor: pointer;
+            min-width: 180px;
+            transition: all 0.3s ease;
+        }
+
+        .filter-select:focus {
+            border-color: #6366f1;
+        }
+
+        .filter-select option {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        /* Modern Glass Table */
+        .table-responsive {
+            width: 100%;
+            overflow-x: auto;
+            margin-top: 24px;
+        }
+
+        .users-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.95rem;
+        }
+
+        .users-table th {
+            padding: 16px;
+            color: var(--muted-text);
+            font-weight: 500;
+            border-bottom: 1px solid var(--border-color);
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+        }
+
+        .users-table td {
+            padding: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            vertical-align: middle;
+        }
+
+        .users-table tbody tr {
+            transition: background 0.2s ease;
+        }
+
+        .users-table tbody tr:hover {
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Status Badges */
+        .badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: capitalize;
+            border: 1px solid transparent;
+        }
+
+        .badge.free {
+            background: rgba(59, 130, 246, 0.1);
+            color: var(--info-color);
+            border-color: rgba(59, 130, 246, 0.2);
+        }
+
+        .badge.standard {
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success-color);
+            border-color: rgba(16, 185, 129, 0.2);
+        }
+
+        .badge.premium {
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning-color);
+            border-color: rgba(245, 158, 11, 0.2);
+        }
+
+        .badge.pro {
+            background: rgba(168, 85, 247, 0.1);
+            color: #c084fc;
+            border-color: rgba(168, 85, 247, 0.2);
+        }
+
+        .days-left {
+            font-weight: 600;
+        }
+
+        .days-left.active { color: var(--success-color); }
+        .days-left.expired { color: var(--danger-color); }
+
+        .btn-action {
+            padding: 8px 14px;
+            background: var(--primary-glow);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);
+        }
+
+        .btn-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-card {
+            background: rgba(17, 24, 39, 0.9);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            padding: 30px;
+            width: 100%;
+            max-width: 460px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+            transform: scale(0.9);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .modal-overlay.open .modal-card {
+            transform: scale(1);
+        }
+
+        .modal-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .modal-body {
+            margin-bottom: 24px;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .btn-cancel {
+            padding: 10px 18px;
+            background: transparent;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-color);
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-cancel:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* Preset Buttons */
+        .preset-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .btn-preset {
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            color: var(--text-color);
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-preset:hover {
+            background: rgba(99, 102, 241, 0.15);
+            border-color: #6366f1;
+        }
+
+        .btn-preset.active {
+            background: var(--primary-glow) !important;
+            color: white !important;
+            border-color: #6366f1 !important;
+            box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+        }
+
+        /* Toast notifications */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #10b981;
+            color: white;
+            padding: 14px 24px;
+            border-radius: 10px;
+            font-weight: 600;
+            z-index: 1000;
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            width: 100%;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 0.85rem;
+            color: var(--muted-text);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            color: var(--text-color);
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .form-input:hover {
+            border-color: rgba(99, 102, 241, 0.4);
+            background: rgba(255, 255, 255, 0.06);
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.15);
+        }
+
+        .form-input:focus {
+            border-color: #a855f7;
+            background: rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.35);
+        }
+
+        .helper-text {
+            font-size: 0.75rem;
+            color: var(--muted-text);
+            margin-top: 6px;
+            opacity: 0.7;
+            line-height: 1.3;
+        }
+
+        /* Hide default browser spinner arrows on number inputs */
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
+
+        /* Subscription breakdown cards styling */
+        .sub-card {
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            backdrop-filter: blur(10px);
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+        .sub-card:hover {
+            transform: translateY(-3px);
+            filter: brightness(1.2);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+        }
+        .sub-card.active-filter {
+            outline: 2px solid white;
+            outline-offset: 1px;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+        }
+
+        /* Tabs styling */
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--muted-text);
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 10px 20px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn:hover {
+            color: var(--text-color);
+            background: rgba(255, 255, 255, 0.04);
+        }
+
+        .tab-btn.active {
+            color: white;
+            background: var(--primary-glow);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        /* Settings CSS */
+        .settings-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .settings-card {
+            background: rgba(17, 24, 39, 0.5);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+        }
+
+        .settings-card:hover {
+            border-color: rgba(99, 102, 241, 0.25);
+            box-shadow: 0 4px 25px rgba(99, 102, 241, 0.1);
+        }
+
+        .settings-section-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 8px;
+            color: var(--text-color);
+        }
+
+        .input-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+
+    <header class="navbar">
+        <div class="logo-group">
+            <h1 class="logo-text">MlzData</h1>
+            <span class="badge-live">Onlayn</span>
+        </div>
+        <a href="/logout" class="btn-logout" id="btn_logout">Chiqish</a>
+    </header>
+
+    <main class="container">
+        <!-- Tab Navigation -->
+        <nav style="display: flex; gap: 12px; margin-bottom: 30px; border-bottom: 1px solid var(--border-color); padding-bottom: 15px;" aria-label="Bosh sahifa bo'limlari">
+            <button class="tab-btn active" id="tab_subscribers" onclick="switchTab('subscribers')">👤 Obunachilar</button>
+            <button class="tab-btn" id="tab_settings" onclick="switchTab('settings')">⚙️ Sozlamalar</button>
+            <button class="tab-btn" id="tab_analytics" onclick="switchTab('analytics')">📊 Biznes Tahlil</button>
+        </nav>
+
+        <!-- Subscribers Content Container -->
+        <div id="subscribers_content">
+            <!-- Metrics Row -->
+            <section class="metrics-grid" aria-label="Statistika paneli">
+                <div id="card_filter_all_top" class="metric-card primary metric-card-clickable" onclick="filterByCard('all')">
+                    <div class="metric-header">
+                        <span>Jami foydalanuvchilar</span>
+                    </div>
+                    <div class="metric-value" id="val_total_users">{{ stats.total_users }}</div>
+                </div>
+                <div id="card_filter_active_today" class="metric-card success metric-card-clickable" onclick="filterByCard('active_today')">
+                    <div class="metric-header">
+                        <span>Bugun faollar</span>
+                    </div>
+                    <div class="metric-value" id="val_active_today">{{ stats.active_today }}</div>
+                </div>
+                <div class="metric-card warning">
+                    <div class="metric-header">
+                        <span>Yuklangan fayllar</span>
+                    </div>
+                    <div class="metric-value" id="val_total_files">{{ stats.total_files }}</div>
+                </div>
+                <div class="metric-card info">
+                    <div class="metric-header">
+                        <span>Jami tahlillar</span>
+                    </div>
+                    <div class="metric-value" id="val_total_queries">{{ stats.total_queries }}</div>
+                </div>
+            </section>
+
+        <!-- Subscription Breakdown Grid -->
+        <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 15px; margin-bottom: 40px;" aria-label="Tariflar bo'yicha taqsimot">
+            <div id="card_filter_free" class="sub-card" style="background: rgba(59, 130, 246, 0.08); border: 1px solid rgba(59, 130, 246, 0.2);" onclick="filterByCard('free')">
+                <p style="font-size: 0.8rem; color: var(--info-color); text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">🎁 Sinovdagilar (Free)</p>
+                <p style="font-size: 1.4rem; font-weight: 700; color: var(--text-color);">{{ stats.active_trial }}</p>
+            </div>
+            <div id="card_filter_standard" class="sub-card" style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.2);" onclick="filterByCard('standard')">
+                <p style="font-size: 0.8rem; color: var(--success-color); text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">💎 Standard</p>
+                <p style="font-size: 1.4rem; font-weight: 700; color: var(--text-color);">{{ stats.active_standard }}</p>
+            </div>
+            <div id="card_filter_premium" class="sub-card" style="background: rgba(245, 158, 11, 0.08); border: 1px solid rgba(245, 158, 11, 0.2);" onclick="filterByCard('premium')">
+                <p style="font-size: 0.8rem; color: var(--warning-color); text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">🚀 Premium</p>
+                <p style="font-size: 1.4rem; font-weight: 700; color: var(--text-color);">{{ stats.active_premium }}</p>
+            </div>
+            <div id="card_filter_pro" class="sub-card" style="background: rgba(168, 85, 247, 0.08); border: 1px solid rgba(168, 85, 247, 0.2);" onclick="filterByCard('pro')">
+                <p style="font-size: 0.8rem; color: #c084fc; text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">👑 Pro</p>
+                <p style="font-size: 1.4rem; font-weight: 700; color: var(--text-color);">{{ stats.active_pro }}</p>
+            </div>
+            <div id="card_filter_expired" class="sub-card" style="background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.2);" onclick="filterByCard('expired')">
+                <p style="font-size: 0.8rem; color: var(--danger-color); text-transform: uppercase; font-weight: 600; margin-bottom: 4px;">❌ Tugaganlar</p>
+                <p style="font-size: 1.4rem; font-weight: 700; color: var(--text-color);">{{ stats.expired }}</p>
+            </div>
+        </section>
+
+        <!-- Users Management Body -->
+        <section class="dashboard-body">
+            <div class="body-header">
+                <h2 class="body-title">Foydalanuvchilar Obunalari</h2>
+                <div class="controls-row">
+                    <div class="search-wrapper">
+                        <input type="text" class="search-input" id="search_input" placeholder="ID, ism yoki username orqali qidirish...">
+                    </div>
+                    <select class="filter-select" id="filter_select" aria-label="Tariflar bo'yicha filtrlash">
+                        <option value="all">Barcha foydalanuvchilar</option>
+                        <option value="active_today">Bugun faollar</option>
+                        <option value="free">Bepul sinovda</option>
+                        <option value="standard">Standard</option>
+                        <option value="premium">Premium</option>
+                        <option value="pro">Pro</option>
+                        <option value="expired">Muddati o'tganlar</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table class="users-table" id="users_table">
+                    <thead>
+                        <tr>
+                            <th>Telegram ID</th>
+                            <th>Ism</th>
+                            <th>Username</th>
+                            <th>Tarif turi</th>
+                            <th>Qolgan muddat</th>
+                            <th>Tugash sanasi</th>
+                            <th>Oxirgi faollik</th>
+                            <th>Harakat</th>
+                        </tr>
+                    </thead>
+                    <tbody id="users_tbody">
+                        {% for u in users %}
+                        <tr data-id="{{ u.user_id }}" data-name="{{ u.first_name }}" data-username="{{ u.username }}" data-type="{{ u.subscription_type }}" data-days="{{ u.remaining_days }}" data-active-today="{% if u.last_seen and u.last_seen.startswith(today_str) %}true{% else %}false{% endif %}">
+                            <td><code>{{ u.user_id }}</code></td>
+                            <td class="col-name"><strong>{{ u.first_name }}</strong></td>
+                            <td class="col-username">@{{ u.username }}</td>
+                            <td>
+                                <span class="badge {{ u.subscription_type }}">{{ u.subscription_type }}</span>
+                            </td>
+                            <td>
+                                {% if u.remaining_days > 0 %}
+                                <span class="days-left active">{{ u.remaining_days }} kun</span>
+                                {% else %}
+                                <span class="days-left expired">Tugagan</span>
+                                {% endif %}
+                            </td>
+                            <td class="col-expiry">{{ u.subscription_ends_at or u.trial_ends_at or 'Mavjud emas' }}</td>
+                            <td style="font-size: 0.85rem; color: var(--muted-text);">{{ u.last_seen }}</td>
+                            <td>
+                                <button class="btn-action" onclick="openActivationModal('{{ u.user_id }}', '{{ u.first_name }}')">Faollashtirish</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        </div>
+
+        <!-- Settings Content Container -->
+        <div id="settings_content" style="display: none;">
+            <div class="dashboard-body" style="padding: 35px; border: 1px solid rgba(255, 255, 255, 0.05); background: rgba(17, 24, 39, 0.85);">
+                <div style="margin-bottom: 30px;">
+                    <h2 class="body-title" style="font-size: 1.6rem; margin-bottom: 6px;">⚙️ Tizim Sozlamalari</h2>
+                    <p style="font-size: 0.9rem; color: var(--muted-text);">Bot cheklovlari, tarif narxlari va maxfiy ulanish kalitlarini boshqarish paneli.</p>
+                </div>
+                
+                <form id="settings_form" onsubmit="event.preventDefault(); saveSettings();">
+                    <div class="settings-grid">
+                        
+                        <!-- Row 1 Left: Free Trial -->
+                        <div class="settings-card" style="border-top: 3px solid #3b82f6;">
+                            <h3 class="settings-section-title" style="border-bottom: none; margin-bottom: 12px; color: #60a5fa;">🎁 Bepul Sinov (Trial)</h3>
+                            <div class="form-group" style="margin-bottom: 16px;">
+                                <label for="setting_free_trial_days" class="form-label">Sinov muddati (Kunlarda)</label>
+                                <input type="number" id="setting_free_trial_days" class="form-input" value="{{ settings.free_trial_days }}" required min="0" placeholder="Masalan: 3">
+                                <p class="helper-text">Yangi a'zo bo'lgan foydalanuvchilar botdan bepul foydalanishi mumkin bo'lgan muddat.</p>
+                            </div>
+                            <div class="input-row">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label for="setting_free_trial_limit" class="form-label">Kunlik fayl limiti</label>
+                                    <input type="number" id="setting_free_trial_limit" class="form-input" value="{{ settings.free_trial_limit or '3' }}" required min="1" placeholder="3">
+                                    <p class="helper-text">Kunlik maksimal yuklash limiti.</p>
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label for="setting_free_trial_rows" class="form-label">Maksimal qatorlar</label>
+                                    <input type="number" id="setting_free_trial_rows" class="form-input" value="{{ settings.free_trial_rows or '1000' }}" required min="1" placeholder="1000">
+                                    <p class="helper-text">Maksimal satrlar soni.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Row 1 Right: Admin Login Settings -->
+                        <div class="settings-card" style="border-top: 3px solid #f43f5e;">
+                            <h3 class="settings-section-title" style="border-bottom: none; margin-bottom: 12px; color: #fb7185;">🔒 Admin Kirish Sozlamalari</h3>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label for="setting_dashboard_username" class="form-label">Foydalanuvchi nomi</label>
+                                    <input type="text" id="setting_dashboard_username" class="form-input" value="{{ settings.dashboard_username or 'admin' }}" required placeholder="admin">
+                                    <p class="helper-text">Admin panel kirish logini.</p>
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label for="setting_dashboard_password" class="form-label">Yangi Parol</label>
+                                    <input type="password" id="setting_dashboard_password" class="form-input" value="{{ settings.dashboard_password or 'admin123' }}" required placeholder="Parol">
+                                    <p class="helper-text">Admin panel xavfsizlik paroli.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Row 2: Tariflar (Bitta alohida qatorda) -->
+                        <div style="grid-column: 1 / -1; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-top: 10px; margin-bottom: 10px;">
+                            <!-- Card 2: Standard Plan -->
+                            <div class="settings-card" style="border-top: 3px solid #10b981;">
+                                <h3 class="settings-section-title" style="border-bottom: none; margin-bottom: 16px; color: #34d399;">💎 Standard Tarif</h3>
+                                <div class="input-row" style="margin-bottom: 16px;">
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label for="setting_standard_price" class="form-label">Tarif narxi (so'm/oy)</label>
+                                        <input type="text" id="setting_standard_price" class="form-input" value="{{ settings.standard_price }}" required placeholder="29,000">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label for="setting_standard_price_yearly" class="form-label">Yillik narxi (so'm/yil)</label>
+                                        <input type="text" id="setting_standard_price_yearly" class="form-input" value="{{ settings.standard_price_yearly or '290,000' }}" required placeholder="290,000">
+                                    </div>
+                                </div>
+                                <div class="input-row">
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label for="setting_standard_limit" class="form-label">Kunlik fayl limiti</label>
+                                        <input type="number" id="setting_standard_limit" class="form-input" value="{{ settings.standard_limit }}" required min="1" placeholder="5">
+                                        <p class="helper-text">Kunlik maksimal limit.</p>
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label for="setting_standard_rows" class="form-label">Maksimal qatorlar</label>
+                                        <input type="number" id="setting_standard_rows" class="form-input" value="{{ settings.standard_rows }}" required min="1" placeholder="1000">
+                                        <p class="helper-text">Maksimal satrlar.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Card 3: Premium Plan -->
+                            <div class="settings-card" style="border-top: 3px solid #f59e0b;">
+                                <h3 class="settings-section-title" style="border-bottom: none; margin-bottom: 16px; color: #fbbf24;">🚀 Premium Tarif</h3>
+                                <div class="input-row" style="margin-bottom: 16px;">
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label for="setting_premium_price" class="form-label">Tarif narxi (so'm/oy)</label>
+                                        <input type="text" id="setting_premium_price" class="form-input" value="{{ settings.premium_price }}" required placeholder="59,000">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label for="setting_premium_price_yearly" class="form-label">Yillik narxi (so'm/yil)</label>
+                                        <input type="text" id="setting_premium_price_yearly" class="form-input" value="{{ settings.premium_price_yearly or '590,000' }}" required placeholder="590,000">
+                                    </div>
+                                </div>
+                                <div class="input-row">
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label for="setting_premium_limit" class="form-label">Kunlik fayl limiti</label>
+                                        <input type="number" id="setting_premium_limit" class="form-input" value="{{ settings.premium_limit }}" required min="1" placeholder="20">
+                                        <p class="helper-text">Kunlik maksimal limit.</p>
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label for="setting_premium_rows" class="form-label">Maksimal qatorlar</label>
+                                        <input type="number" id="setting_premium_rows" class="form-input" value="{{ settings.premium_rows }}" required min="1" placeholder="10000">
+                                        <p class="helper-text">Maksimal satrlar.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Card 4: Pro Plan -->
+                            <div class="settings-card" style="border-top: 3px solid #a855f7;">
+                                <h3 class="settings-section-title" style="border-bottom: none; margin-bottom: 16px; color: #c084fc;">👑 Pro Tarif</h3>
+                                <div class="input-row" style="margin-bottom: 0;">
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label for="setting_pro_price" class="form-label">Pro tarif narxi (so'm/oy)</label>
+                                        <input type="text" id="setting_pro_price" class="form-input" value="{{ settings.pro_price }}" required placeholder="99,000">
+                                    </div>
+                                    <div class="form-group" style="margin-bottom: 0;">
+                                        <label for="setting_pro_price_yearly" class="form-label">Yillik narxi (so'm/yil)</label>
+                                        <input type="text" id="setting_pro_price_yearly" class="form-input" value="{{ settings.pro_price_yearly or '990,000' }}" required placeholder="990,000">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Row 3: API & Telegram Credentials -->
+                        <div class="settings-card" style="grid-column: 1 / -1; border-top: 3px solid #ec4899;">
+                            <h3 class="settings-section-title" style="border-bottom: none; margin-bottom: 20px; color: #f472b6;">🔑 API & Tizim Kalitlari</h3>
+                            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px;">
+                                <div class="form-group">
+                                    <label for="setting_admin_telegram_id" class="form-label">Admin Telegram ID</label>
+                                    <input type="text" id="setting_admin_telegram_id" class="form-input" value="{{ settings.admin_telegram_id }}" required placeholder="6115902116">
+                                    <p class="helper-text">Barcha hisobot va statistik bildirishnomalar yuboriladigan asosiy admin IDsi.</p>
+                                </div>
+                                <div class="form-group">
+                                    <label for="setting_telegram_bot_token" class="form-label">Telegram Bot Token</label>
+                                    <input type="text" id="setting_telegram_bot_token" class="form-input" value="{{ settings.telegram_bot_token }}" placeholder="BotFather bergan token">
+                                    <p class="helper-text">Telegram botni ishga tushiruvchi ulanish kaliti (Token).</p>
+                                </div>
+                                <div class="form-group">
+                                    <label for="setting_gemini_api_key" class="form-label">Gemini API Key (Google AI Studio)</label>
+                                    <input type="password" id="setting_gemini_api_key" class="form-input" value="{{ settings.gemini_api_key }}" placeholder="AI Studio kaliti">
+                                    <p class="helper-text">Excel ma'lumotlarini tahlil qiluvchi va grafik chizuvchi sun'iy intellekt kaliti.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    
+                    <div style="display: flex; justify-content: flex-end; margin-top: 10px;">
+                        <button type="submit" class="btn-action" style="padding: 15px 45px; font-size: 1rem; border-radius: 12px; background: linear-gradient(135deg, #6366f1, #a855f7); box-shadow: 0 4px 15px rgba(168, 85, 247, 0.3);">Sozlamalarni Saqlash</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Business Analytics Content Container -->
+        <div id="analytics_content" style="display: none;">
+            
+            <!-- Analytics Mode Switcher -->
+            <div style="display: flex; gap: 10px; margin-bottom: 24px; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 12px; padding: 6px; width: fit-content; backdrop-filter: blur(10px);">
+                <button id="btn_mode_sales" onclick="switchAnalyticsMode('sales')" style="background: var(--primary-glow); border: none; color: white; font-size: 0.95rem; padding: 8px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s; box-shadow: 0 4px 10px rgba(99, 102, 241, 0.2);">🎯 Konversiya Hisoboti</button>
+                <button id="btn_mode_subs" onclick="switchAnalyticsMode('subs')" style="background: none; border: none; color: var(--muted-text); font-size: 0.95rem; padding: 8px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s;">👥 Obunachilar Tahlili</button>
+            </div>
+
+            <!-- File Drop/Upload Section -->
+            <div id="sales_upload_section" class="settings-card" style="margin-bottom: 30px; border-top: 3px solid #10b981; padding: 24px;">
+                <h3 class="settings-section-title" style="border-bottom: none; margin-bottom: 8px; color: #10b981;">📊 Biznesingizni Tahlil Qiling</h3>
+                <p style="font-size: 0.9rem; color: var(--muted-text); margin-bottom: 20px;">Sotuvlaringizga doir CSV yoki Excel (.xlsx, .xls) faylini yuklang va interaktiv grafikli hisobotlarni oling.</p>
+                <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+                    <input type="file" id="analytics_file_input" accept=".csv, .xlsx, .xls" style="display: none;" onchange="handleAnalyticsFileUpload()">
+                    <button class="btn-action" style="background: linear-gradient(135deg, #10b981, #059669); padding: 12px 24px; font-size: 0.95rem; border-radius: 10px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);" onclick="document.getElementById('analytics_file_input').click()">📁 Faylni tanlash</button>
+                    <span id="analytics_file_name" style="color: var(--muted-text); font-size: 0.9rem;">Fayl tanlanmagan</span>
+                    <button id="btn_run_analytics" class="btn-action" style="display: none; padding: 12px 24px; font-size: 0.95rem; border-radius: 10px; background: linear-gradient(135deg, #3b82f6, #2563eb);" onclick="uploadAndAnalyzeFile()">🚀 Tahlilni Boshlash</button>
+                </div>
+            </div>
+
+            <!-- KPI Cards Row -->
+            <h3 class="settings-section-title" style="border-bottom: none; margin-bottom: 16px; font-size: 1.2rem; color: var(--text-color);" id="analytics_title">Umumiy ko'rsatkichlar — 3 oylik savdo</h3>
+            <section class="metrics-grid" style="margin-bottom: 30px;" aria-label="Tahliliy statistika paneli">
+                <div class="metric-card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);">
+                    <div class="metric-header" style="color: var(--muted-text); font-size: 0.85rem; text-transform: uppercase; font-weight: 600;" id="label_kpi_total_revenue">Jami tushum</div>
+                    <div class="metric-value" style="font-size: 1.8rem; font-weight: 700; color: #10b981; margin: 8px 0;" id="kpi_total_revenue">27.9M</div>
+                    <div style="font-size: 0.8rem; color: var(--muted-text);" id="kpi_revenue_sub">so'm, 3 oy</div>
+                </div>
+                <div class="metric-card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);">
+                    <div class="metric-header" style="color: var(--muted-text); font-size: 0.85rem; text-transform: uppercase; font-weight: 600;" id="label_kpi_avg_check">O'rtacha chek</div>
+                    <div class="metric-value" style="font-size: 1.8rem; font-weight: 700; color: white; margin: 8px 0;" id="kpi_avg_check">797K</div>
+                    <div style="font-size: 0.8rem; color: var(--muted-text);" id="kpi_avg_check_sub">so'm / tranzaksiya</div>
+                </div>
+                <div class="metric-card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);">
+                    <div class="metric-header" style="color: var(--muted-text); font-size: 0.85rem; text-transform: uppercase; font-weight: 600;" id="label_kpi_growth">O'sish sur'ati</div>
+                    <div class="metric-value" style="font-size: 1.8rem; font-weight: 700; color: #10b981; margin: 8px 0;" id="kpi_growth">+39.9%</div>
+                    <div style="font-size: 0.8rem; color: var(--muted-text);" id="kpi_growth_sub">oldingi oyga nisbatan</div>
+                </div>
+                <div class="metric-card" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);">
+                    <div class="metric-header" style="color: var(--muted-text); font-size: 0.85rem; text-transform: uppercase; font-weight: 600;" id="label_kpi_transactions">Tranzaksiyalar</div>
+                    <div class="metric-value" style="font-size: 1.8rem; font-weight: 700; color: white; margin: 8px 0;" id="kpi_transactions">35</div>
+                    <div style="font-size: 0.8rem; color: var(--muted-text);" id="kpi_transactions_sub">jami savdo</div>
+                </div>
+            </section>
+
+            <!-- Sales by Month Bar Chart -->
+            <div class="settings-card" style="margin-bottom: 30px; padding: 24px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+                    <h3 id="chart_title" class="settings-section-title" style="border-bottom: none; margin-bottom: 0; font-size: 1.1rem; color: var(--text-color);">Oylar bo'yicha savdo (so'm)</h3>
+                    
+                    <!-- Time Granularity Selector -->
+                    <div id="chart_period_selector" style="display: none; background: rgba(255,255,255,0.03); border: 1px solid var(--border-color); border-radius: 8px; padding: 4px; gap: 4px;">
+                        <button class="btn-preset" id="btn_period_days" onclick="changeChartPeriod('days')" style="margin: 0; padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; border: none; background: none; color: var(--muted-text); cursor: pointer; transition: all 0.2s;">Kunlar</button>
+                        <button class="btn-preset" id="btn_period_weeks" onclick="changeChartPeriod('weeks')" style="margin: 0; padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; border: none; background: none; color: var(--muted-text); cursor: pointer; transition: all 0.2s;">Haftalar</button>
+                        <button class="btn-preset" id="btn_period_months" onclick="changeChartPeriod('months')" style="margin: 0; padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; border: none; background: var(--primary-glow); color: white; box-shadow: 0 2px 6px rgba(99, 102, 241, 0.2); cursor: pointer; transition: all 0.2s;">Oylar</button>
+                        <button class="btn-preset" id="btn_period_years" onclick="changeChartPeriod('years')" style="margin: 0; padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; border: none; background: none; color: var(--muted-text); cursor: pointer; transition: all 0.2s;">Yillar</button>
+                    </div>
+                </div>
+                <div style="position: relative; height: 320px; width: 100%;">
+                    <canvas id="monthlyChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Product Ranking & Geographical Split Row -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 40px; flex-wrap: wrap;" id="analytics_details_row">
+                <!-- Product Ranking Card -->
+                <div class="settings-card" style="padding: 24px; display: flex; flex-direction: column;">
+                    <h3 id="product_ranking_title" class="settings-section-title" style="border-bottom: none; margin-bottom: 20px; font-size: 1.1rem; color: var(--text-color);">Mahsulotlar reytingi (tushum bo'yicha)</h3>
+                    <div id="product_ranking_container" style="display: flex; flex-direction: column; gap: 20px;">
+                        <!-- Mockup items -->
+                        <div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.95rem; margin-bottom: 6px;">
+                                <span style="font-weight: 600;">Shashlik</span>
+                                <span style="color: var(--muted-text); font-size: 0.85rem;">225 dona | <strong style="color: white;">10.7M so'm</strong></span>
+                            </div>
+                            <div style="height: 10px; background: rgba(255,255,255,0.05); border-radius: 5px; overflow: hidden;">
+                                <div style="width: 100%; height: 100%; background: linear-gradient(90deg, #10b981, #059669); border-radius: 5px;"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.95rem; margin-bottom: 6px;">
+                                <span style="font-weight: 600;">Palov</span>
+                                <span style="color: var(--muted-text); font-size: 0.85rem;">193 dona | <strong style="color: white;">7.0M so'm</strong></span>
+                            </div>
+                            <div style="height: 10px; background: rgba(255,255,255,0.05); border-radius: 5px; overflow: hidden;">
+                                <div style="width: 65%; height: 100%; background: linear-gradient(90deg, #6366f1, #4f46e5); border-radius: 5px;"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.95rem; margin-bottom: 6px;">
+                                <span style="font-weight: 600;">Somsa</span>
+                                <span style="color: var(--muted-text); font-size: 0.85rem;">430 dona | <strong style="color: white;">3.7M so'm</strong></span>
+                            </div>
+                            <div style="height: 10px; background: rgba(255,255,255,0.05); border-radius: 5px; overflow: hidden;">
+                                <div style="width: 35%; height: 100%; background: linear-gradient(90deg, #f59e0b, #d97706); border-radius: 5px;"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.95rem; margin-bottom: 6px;">
+                                <span style="font-weight: 600;">Manti</span>
+                                <span style="color: var(--muted-text); font-size: 0.85rem;">120 dona | <strong style="color: white;">2.8M so'm</strong></span>
+                            </div>
+                            <div style="height: 10px; background: rgba(255,255,255,0.05); border-radius: 5px; overflow: hidden;">
+                                <div style="width: 26%; height: 100%; background: linear-gradient(90deg, #a855f7, #8b5cf6); border-radius: 5px;"></div>
+                            </div>
+                        </div>
+                        <div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.95rem; margin-bottom: 6px;">
+                                <span style="font-weight: 600;">Lag'mon</span>
+                                <span style="color: var(--muted-text); font-size: 0.85rem;">85 dona | <strong style="color: white;">1.5M so'm</strong></span>
+                            </div>
+                            <div style="height: 10px; background: rgba(255,255,255,0.05); border-radius: 5px; overflow: hidden;">
+                                <div style="width: 14%; height: 100%; background: linear-gradient(90deg, #6b7280, #4b5563); border-radius: 5px;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- City & Payment Splits Column -->
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <!-- City Split -->
+                    <div class="settings-card" style="padding: 24px; flex: 1;">
+                        <h3 id="city_split_title" class="settings-section-title" style="border-bottom: none; margin-bottom: 16px; font-size: 1.1rem; color: var(--text-color);">Shahar bo'yicha</h3>
+                        <div id="city_distribution_container" style="display: flex; flex-direction: column; gap: 12px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.95rem;">
+                                <span style="display: flex; align-items: center; gap: 8px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #10b981; display: inline-block;"></span> Toshkent</span>
+                                <span style="font-weight: 600;">74.6%</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.95rem;">
+                                <span style="display: flex; align-items: center; gap: 8px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #6366f1; display: inline-block;"></span> Samarqand</span>
+                                <span style="font-weight: 600;">14.9%</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.95rem;">
+                                <span style="display: flex; align-items: center; gap: 8px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #f59e0b; display: inline-block;"></span> Buxoro</span>
+                                <span style="font-weight: 600;">10.5%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Payment Split -->
+                    <div class="settings-card" style="padding: 24px; flex: 1;">
+                        <h3 id="payment_split_title" class="settings-section-title" style="border-bottom: none; margin-bottom: 12px; font-size: 1.1rem; color: var(--text-color);">To'lov turi</h3>
+                        <div id="payment_distribution_container" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.95rem;">
+                                <span style="display: flex; align-items: center; gap: 8px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #10b981; display: inline-block;"></span> Naqd</span>
+                                <span style="font-weight: 600;">63.5%</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.95rem;">
+                                <span style="display: flex; align-items: center; gap: 8px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: #a855f7; display: inline-block;"></span> Karta</span>
+                                <span style="font-weight: 600;">36.5%</span>
+                            </div>
+                        </div>
+                        <p style="font-size: 0.8rem; color: var(--muted-text); opacity: 0.85; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 10px;" id="payment_note">💡 Karta ulushi o'smoqda — kuzatish kerak</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Activation Modal Overlay -->
+    <div class="modal-overlay" id="activation_modal">
+        <div class="modal-card">
+            <h3 class="modal-title">Tarifni Faollashtirish</h3>
+            
+            <div class="modal-body">
+                <input type="hidden" id="modal_user_id">
+                
+                <div style="margin-bottom: 16px;">
+                    <p style="font-size: 0.85rem; color: var(--muted-text); margin-bottom: 4px;">Foydalanuvchi:</p>
+                    <p id="modal_user_info" style="font-weight: 600; font-size: 1.1rem; color: var(--text-color);"></p>
+                </div>
+
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label class="form-label">Tarif Rejasi</label>
+                    <input type="hidden" id="modal_sub_type" value="standard">
+                    <div class="preset-grid" id="tariff_preset_grid">
+                        <button class="btn-preset active" data-tariff="standard" onclick="setPresetTariff('standard')">Standard</button>
+                        <button class="btn-preset" data-tariff="premium" onclick="setPresetTariff('premium')">Premium</button>
+                        <button class="btn-preset" data-tariff="pro" onclick="setPresetTariff('pro')">Pro</button>
+                        <button class="btn-preset" data-tariff="free" onclick="setPresetTariff('free')">Bepul sinov (free)</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="modal_days" class="form-label">Muddat (Kunlarda)</label>
+                    <input type="number" id="modal_days" class="form-input" value="30" min="1" oninput="updateDaysActiveState()">
+                    <div class="preset-grid" id="days_preset_grid">
+                        <button class="btn-preset" data-days="3" onclick="setPresetDays(3)">3 kun</button>
+                        <button class="btn-preset active" data-days="30" onclick="setPresetDays(30)">30 kun</button>
+                        <button class="btn-preset" data-days="90" onclick="setPresetDays(90)">90 kun</button>
+                        <button class="btn-preset" data-days="365" onclick="setPresetDays(365)">365 kun</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeActivationModal()">Bekor qilish</button>
+                <button class="btn-action" style="padding: 10px 20px;" onclick="submitActivation()">Faollashtirish</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast_notification" role="status">
+        Obuna muvaffaqiyatli faollashtirildi!
+    </div>
+
+    <script>
+        // Modal functions
+        function openActivationModal(userId, firstName) {
+            document.getElementById('modal_user_id').value = userId;
+            document.getElementById('modal_user_info').innerText = `${firstName} (ID: ${userId})`;
+            setPresetTariff('pro'); // default to Pro
+            setPresetDays(30);     // default to 30 days
+            document.getElementById('activation_modal').classList.add('open');
+        }
+
+        function closeActivationModal() {
+            document.getElementById('activation_modal').classList.remove('open');
+        }
+
+        function setPresetTariff(tariff) {
+            document.getElementById('modal_sub_type').value = tariff;
+            document.querySelectorAll('#tariff_preset_grid .btn-preset').forEach(btn => {
+                if (btn.getAttribute('data-tariff') === tariff) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        function setPresetDays(days) {
+            document.getElementById('modal_days').value = days;
+            updateDaysActiveState();
+        }
+
+        function updateDaysActiveState() {
+            const days = parseInt(document.getElementById('modal_days').value) || 0;
+            document.querySelectorAll('#days_preset_grid .btn-preset').forEach(btn => {
+                const btnDays = parseInt(btn.getAttribute('data-days'));
+                if (btnDays === days) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        // Live Search
+        const searchInput = document.getElementById('search_input');
+        const filterSelect = document.getElementById('filter_select');
+        const tableRows = document.querySelectorAll('#users_tbody tr');
+
+        function filterTable() {
+            const query = searchInput.value.toLowerCase().trim();
+            const filter = filterSelect.value;
+
+            tableRows.forEach(row => {
+                const id = row.getAttribute('data-id').toLowerCase();
+                const name = row.getAttribute('data-name').toLowerCase();
+                const username = row.getAttribute('data-username').toLowerCase();
+                const type = row.getAttribute('data-type');
+                const days = parseInt(row.getAttribute('data-days'));
+
+                const matchesSearch = id.includes(query) || name.includes(query) || username.includes(query);
+                
+                let matchesFilter = true;
+                if (filter === 'expired') {
+                    matchesFilter = (days <= 0);
+                } else if (filter === 'active_today') {
+                    const activeToday = row.getAttribute('data-active-today') === 'true';
+                    matchesFilter = activeToday;
+                } else if (filter !== 'all') {
+                    matchesFilter = (type === filter);
+                }
+
+                if (matchesSearch && matchesFilter) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+        }
+
+        searchInput.addEventListener('input', filterTable);
+        filterSelect.addEventListener('change', function() {
+            // Remove card highlights when dropdown is changed manually
+            document.querySelectorAll('.sub-card, .metric-card-clickable').forEach(c => c.classList.remove('active-filter'));
+            let card = document.getElementById(`card_filter_${filterSelect.value}`);
+            if (!card && filterSelect.value === 'all') {
+                card = document.getElementById('card_filter_all_top');
+            } else if (!card && filterSelect.value === 'active_today') {
+                card = document.getElementById('card_filter_active_today');
+            }
+            if (card) card.classList.add('active-filter');
+            filterTable();
+        });
+
+        function filterByCard(type) {
+            const currentFilter = filterSelect.value;
+            document.querySelectorAll('.sub-card, .metric-card-clickable').forEach(c => c.classList.remove('active-filter'));
+
+            if (currentFilter === type) {
+                filterSelect.value = 'all';
+                const topAll = document.getElementById('card_filter_all_top');
+                if (topAll) topAll.classList.add('active-filter');
+            } else {
+                filterSelect.value = type;
+                let card = document.getElementById(`card_filter_${type}`);
+                if (!card && type === 'all') {
+                    card = document.getElementById('card_filter_all_top');
+                } else if (!card && type === 'active_today') {
+                    card = document.getElementById('card_filter_active_today');
+                }
+                if (card) {
+                    card.classList.add('active-filter');
+                }
+            }
+            filterTable();
+        }
+
+        // AJAX API Submit Activation
+        function submitActivation() {
+            const userId = document.getElementById('modal_user_id').value;
+            const subType = document.getElementById('modal_sub_type').value;
+            const days = document.getElementById('modal_days').value;
+
+            fetch('/api/activate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    user_id: userId,
+                    sub_type: subType,
+                    days: days
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    // Show Toast
+                    const toast = document.getElementById('toast_notification');
+                    toast.innerText = data.message;
+                    toast.classList.add('show');
+                    setTimeout(() => {
+                        toast.classList.remove('show');
+                    }, 4000);
+
+                    // Update Row values dynamically
+                    const row = document.querySelector(`#users_tbody tr[data-id="${userId}"]`);
+                    if (row) {
+                        row.setAttribute('data-type', subType);
+                        row.setAttribute('data-days', days);
+                        
+                        // Update badge
+                        const badge = row.querySelector('.badge');
+                        badge.className = `badge ${subType}`;
+                        badge.innerText = subType;
+
+                        // Update days left text
+                        const daysLeft = row.querySelector('.days-left');
+                        daysLeft.className = 'days-left active';
+                        daysLeft.innerText = `${days} kun`;
+
+                        // Update expiry date display cell (will render next time page reload, or we can write a rough estimation)
+                        const expiryCell = row.querySelector('.col-expiry');
+                        const now = new Date();
+                        now.setDate(now.getDate() + parseInt(days));
+                        expiryCell.innerText = now.toISOString().slice(0, 19).replace('T', ' ');
+                    }
+
+                    closeActivationModal();
+                } else {
+                    alert('Xatolik: ' + data.message);
+                }
+            })
+            .catch(err => {
+                alert('Serverga ulanishda xatolik yuz berdi: ' + err);
+            });
+        }
+
+        // Tab switching logic
+        function switchTab(tabName) {
+            const subsTab = document.getElementById('tab_subscribers');
+            const settingsTab = document.getElementById('tab_settings');
+            const analyticsTab = document.getElementById('tab_analytics');
+            
+            const subsContent = document.getElementById('subscribers_content');
+            const settingsContent = document.getElementById('settings_content');
+            const analyticsContent = document.getElementById('analytics_content');
+
+            subsTab.classList.remove('active');
+            settingsTab.classList.remove('active');
+            analyticsTab.classList.remove('active');
+            
+            subsContent.style.display = 'none';
+            settingsContent.style.display = 'none';
+            analyticsContent.style.display = 'none';
+
+            if (tabName === 'subscribers') {
+                subsTab.classList.add('active');
+                subsContent.style.display = 'block';
+            } else if (tabName === 'settings') {
+                settingsTab.classList.add('active');
+                settingsContent.style.display = 'block';
+            } else if (tabName === 'analytics') {
+                analyticsTab.classList.add('active');
+                analyticsContent.style.display = 'block';
+                // Trigger mode rendering
+                setTimeout(() => {
+                    switchAnalyticsMode(activeAnalyticsMode);
+                }, 50);
+            }
+        }
+
+        // Chart.js instance variable
+        let myChart = null;
+
+        function initAnalyticsCharts(labels = ['Yanvar', 'Fevral', 'Mart'], data = [8900000, 7900000, 11100000], datasetLabel = "Savdo hajmi (so'm)") {
+            const canvasEl = document.getElementById('monthlyChart');
+            if (!canvasEl) return;
+            const ctx = canvasEl.getContext('2d');
+            if (myChart) {
+                myChart.destroy();
+            }
+            
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: datasetLabel,
+                        data: data,
+                        backgroundColor: [
+                            'rgba(16, 185, 129, 0.65)',
+                            'rgba(244, 180, 160, 0.65)',
+                            'rgba(5, 150, 105, 0.65)',
+                            'rgba(99, 102, 241, 0.65)',
+                            'rgba(168, 85, 247, 0.65)'
+                        ],
+                        borderColor: [
+                            '#10b981',
+                            '#f4b4a0',
+                            '#059669',
+                            '#6366f1',
+                            '#a855f7'
+                        ],
+                        borderWidth: 1.5,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            },
+                            ticks: {
+                                color: '#a1a1aa',
+                                callback: function(value) {
+                                    if (activeAnalyticsMode === 'subs') {
+                                        return value + ' ta';
+                                    }
+                                    if (value >= 1000000) {
+                                        return (value / 1000000).toFixed(1) + 'M';
+                                    } else if (value >= 1000) {
+                                        return (value / 1000).toFixed(0) + 'K';
+                                    }
+                                    return value;
+                                }
+                            }
+                        },
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#a1a1aa'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // File upload event handlers
+        let selectedAnalyticsFile = null;
+
+        function handleAnalyticsFileUpload() {
+            const fileInput = document.getElementById('analytics_file_input');
+            const fileNameSpan = document.getElementById('analytics_file_name');
+            const runBtn = document.getElementById('btn_run_analytics');
+            
+            if (fileInput.files.length > 0) {
+                selectedAnalyticsFile = fileInput.files[0];
+                fileNameSpan.innerText = selectedAnalyticsFile.name;
+                runBtn.style.display = 'inline-block';
+            } else {
+                selectedAnalyticsFile = null;
+                fileNameSpan.innerText = "Fayl tanlanmagan";
+                runBtn.style.display = 'none';
+            }
+        }
+
+        function formatCurrency(value) {
+            if (value >= 1000000) {
+                return (value / 1000000).toFixed(1) + 'M';
+            } else if (value >= 1000) {
+                return (value / 1000).toFixed(0) + 'K';
+            }
+            return value.toLocaleString();
+        }
+
+        function uploadAndAnalyzeFile() {
+            if (!selectedAnalyticsFile) return;
+            
+            const runBtn = document.getElementById('btn_run_analytics');
+            runBtn.disabled = true;
+            runBtn.innerText = "Tahlil qilinmoqda...";
+
+            const formData = new FormData();
+            formData.append('file', selectedAnalyticsFile);
+
+            fetch('/api/analyze-file', {
+                method: 'POST',
+                body: formData
+            })
+            .then(res => res.json())
+            .then(data => {
+                runBtn.disabled = false;
+                runBtn.innerText = "🚀 Tahlilni Boshlash";
+
+                if (data.error) {
+                    alert("Xatolik: " + data.error);
+                    return;
+                }
+
+                lastUploadedSalesData = data;
+                document.getElementById('analytics_title').innerText = `Tahlil natijalari: ${selectedAnalyticsFile.name}`;
+                renderAnalyticsData(data, false);
+
+                // Show success toast
+                const toast = document.getElementById('toast_notification');
+                toast.innerText = "Tahlil muvaffaqiyatli yakunlandi!";
+                toast.classList.add('show');
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                }, 4000);
+            })
+            .catch(err => {
+                runBtn.disabled = false;
+                runBtn.innerText = "🚀 Tahlilni Boshlash";
+                alert("Faylni yuklashda server xatosi: " + err);
+            });
+        }
+
+        // Mode Switching and Custom rendering for Subscribers
+        let activeAnalyticsMode = 'sales';
+        let lastUploadedSalesData = null;
+        let subscribersAnalyticsData = null;
+
+        const demoSalesData = {
+            total_revenue: 27900000,
+            avg_check: 797000,
+            growth_rate: 39.9,
+            total_transactions: 35,
+            monthly_sales: { "Yanvar": 8900000, "Fevral": 7900000, "Mart": 11100000 },
+            product_ranking: [
+                { name: "Shashlik", quantity: 225, revenue: 10700000 },
+                { name: "Palov", quantity: 193, revenue: 7000000 },
+                { name: "Somsa", quantity: 430, revenue: 3700000 },
+                { name: "Manti", quantity: 120, revenue: 2800000 },
+                { name: "Lag'mon", quantity: 85, revenue: 1500000 }
+            ],
+            city_distribution: [
+                { name: "Toshkent", percentage: 74.6 },
+                { name: "Samarqand", percentage: 14.9 },
+                { name: "Buxoro", percentage: 10.5 }
+            ],
+            payment_distribution: [
+                { name: "Naqd", percentage: 63.5 },
+                { name: "Karta", percentage: 36.5 }
+            ]
+        };
+
+        function switchAnalyticsMode(mode) {
+            activeAnalyticsMode = mode;
+            
+            const btnSales = document.getElementById('btn_mode_sales');
+            const btnSubs = document.getElementById('btn_mode_subs');
+            
+            if (mode === 'sales') {
+                btnSales.style.background = 'var(--primary-glow)';
+                btnSales.style.color = 'white';
+                btnSales.style.boxShadow = '0 4px 10px rgba(99, 102, 241, 0.2)';
+                
+                btnSubs.style.background = 'none';
+                btnSubs.style.color = 'var(--muted-text)';
+                btnSubs.style.boxShadow = 'none';
+                
+                document.getElementById('sales_upload_section').style.display = 'none';
+                document.getElementById('chart_period_selector').style.display = 'none';
+                
+                // Labels
+                document.getElementById('label_kpi_total_revenue').innerText = 'Trial -> Paid %';
+                document.getElementById('kpi_revenue_sub').innerText = "Premium obunaga o'tish ko'rsatkichi";
+                document.getElementById('label_kpi_avg_check').innerText = "Churn %";
+                document.getElementById('kpi_avg_check_sub').innerText = "A'zolikni tark etish ko'rsatkichi";
+                document.getElementById('label_kpi_growth').innerText = "Jami foydalanuvchilar";
+                document.getElementById('kpi_growth_sub').innerText = "tizimdagi jami ro'yxat";
+                document.getElementById('label_kpi_transactions').innerText = "Jami so'rovlar";
+                document.getElementById('kpi_transactions_sub').innerText = "foydalanuvchi so'rovlari";
+                
+                document.getElementById('chart_title').innerText = "Eng faol soatlar (kunlik so'rovlar soni)";
+                document.getElementById('product_ranking_title').innerText = "Eng ko'p beriladigan so'rovlar";
+                document.getElementById('city_split_title').innerText = "Hududlar bo'yicha";
+                document.getElementById('payment_split_title').innerText = "Obuna holati";
+                document.getElementById('payment_note').innerText = "💡 Konversiya va faollik tahliliy ko'rsatkichlari.";
+                
+                document.getElementById('analytics_title').innerText = "Konversiya va faollik hisoboti (Tizim ma'lumotlari)";
+
+                fetch('/api/conversion-analytics')
+                .then(res => res.json())
+                .then(data => {
+                    renderConversionData(data);
+                })
+                .catch(err => {
+                    alert("Konversiya hisobotini yuklashda xatolik: " + err);
+                });
+            } else {
+                btnSubs.style.background = 'var(--primary-glow)';
+                btnSubs.style.color = 'white';
+                btnSubs.style.boxShadow = '0 4px 10px rgba(99, 102, 241, 0.2)';
+                
+                btnSales.style.background = 'none';
+                btnSales.style.color = 'var(--muted-text)';
+                btnSales.style.boxShadow = 'none';
+                
+                document.getElementById('sales_upload_section').style.display = 'none';
+                document.getElementById('chart_period_selector').style.display = 'flex';
+                
+                // Labels
+                document.getElementById('label_kpi_total_revenue').innerText = 'Jami foydalanuvchilar';
+                document.getElementById('kpi_revenue_sub').innerText = "tizimdagi jami ro'yxat";
+                document.getElementById('label_kpi_avg_check').innerText = "Faol obunalar";
+                document.getElementById('kpi_avg_check_sub').innerText = "faol obunachilar";
+                document.getElementById('label_kpi_growth').innerText = "Bugun faollar";
+                document.getElementById('kpi_growth_sub').innerText = "oxirgi 24 soatda";
+                document.getElementById('label_kpi_transactions').innerText = "Jami so'rovlar";
+                document.getElementById('kpi_transactions_sub').innerText = "foydalanuvchi so'rovlari";
+                
+                document.getElementById('product_ranking_title').innerText = "Tariflar reytingi (obunachilar bo'yicha)";
+                document.getElementById('city_split_title').innerText = "Hududlar bo'yicha";
+                document.getElementById('payment_split_title').innerText = "Obuna holati";
+                document.getElementById('payment_note').innerText = "💡 Foydalanuvchilarning obuna statusi taqsimoti.";
+                
+                document.getElementById('analytics_title').innerText = "Obunachilar tahlili (Tizim ma'lumotlari)";
+                
+                changeChartPeriod(activeChartPeriod);
+            }
+        }
+
+        function renderConversionData(data) {
+            document.getElementById('kpi_total_revenue').innerText = data.conversion_rate + "%";
+            document.getElementById('kpi_avg_check').innerText = data.churn_rate + "%";
+            document.getElementById('kpi_growth').innerText = data.total_users;
+            document.getElementById('kpi_transactions').innerText = data.total_queries;
+
+            // Chart
+            const chartLabels = data.active_hours.map(h => h.hour);
+            const chartValues = data.active_hours.map(h => h.count);
+            initAnalyticsCharts(chartLabels, chartValues, "So'rovlar soni");
+
+            // Product/Plan ranking list
+            const prodContainer = document.getElementById('product_ranking_container');
+            prodContainer.innerHTML = '';
+            
+            if (!data.frequent_queries || data.frequent_queries.length === 0) {
+                prodContainer.innerHTML = `<p style="color: var(--muted-text); font-size: 0.9rem;">Ma'lumotlar topilmadi.</p>`;
+            } else {
+                const maxVal = Math.max(...data.frequent_queries.map(q => q.count));
+                
+                const colors = [
+                    ['#10b981', '#059669'], // Green
+                    ['#6366f1', '#4f46e5'], // Blue
+                    ['#f59e0b', '#d97706'], // Orange
+                    ['#a855f7', '#8b5cf6'], // Purple
+                    ['#6b7280', '#4b5563']  // Gray
+                ];
+
+                data.frequent_queries.forEach((q, index) => {
+                    const widthPct = maxVal > 0 ? (q.count / maxVal * 100) : 0;
+                    const gradColors = colors[index % colors.length];
+                    
+                    const itemHtml = `
+                        <div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.95rem; margin-bottom: 6px;">
+                                <span style="font-weight: 600;">"${q.query}"</span>
+                                <span style="color: var(--muted-text); font-size: 0.85rem;">${q.count} marta so'ralgan</span>
+                            </div>
+                            <div style="height: 10px; background: rgba(255,255,255,0.05); border-radius: 5px; overflow: hidden;">
+                                <div style="width: ${widthPct}%; height: 100%; background: linear-gradient(90deg, ${gradColors[0]}, ${gradColors[1]}); border-radius: 5px;"></div>
+                            </div>
+                        </div>
+                    `;
+                    prodContainer.insertAdjacentHTML('beforeend', itemHtml);
+                });
+            }
+
+            // City splits
+            const cityContainer = document.getElementById('city_distribution_container');
+            cityContainer.innerHTML = '';
+            
+            const cityColors = ['#10b981', '#6366f1', '#f59e0b', '#a855f7', '#ec4899'];
+            data.city_distribution.forEach((city, index) => {
+                const col = cityColors[index % cityColors.length];
+                const itemHtml = `
+                    <div style="display: flex; justify-content: space-between; font-size: 0.95rem;">
+                        <span style="display: flex; align-items: center; gap: 8px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: ${col}; display: inline-block;"></span> ${city.name}</span>
+                        <span style="font-weight: 600;">${city.percentage}%</span>
+                    </div>
+                `;
+                cityContainer.insertAdjacentHTML('beforeend', itemHtml);
+            });
+
+            // Payment splits
+            const payContainer = document.getElementById('payment_distribution_container');
+            payContainer.innerHTML = '';
+            
+            const payColors = ['#10b981', '#a855f7', '#6366f1'];
+            data.payment_distribution.forEach((pay, index) => {
+                const col = payColors[index % payColors.length];
+                const itemHtml = `
+                    <div style="display: flex; justify-content: space-between; font-size: 0.95rem;">
+                        <span style="display: flex; align-items: center; gap: 8px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: ${col}; display: inline-block;"></span> ${pay.name}</span>
+                        <span style="font-weight: 600;">${pay.percentage}%</span>
+                    </div>
+                `;
+                payContainer.insertAdjacentHTML('beforeend', itemHtml);
+            });
+        }
+
+        let activeChartPeriod = 'months';
+        
+        function changeChartPeriod(period) {
+            activeChartPeriod = period;
+            
+            const periods = ['days', 'weeks', 'months', 'years'];
+            periods.forEach(p => {
+                const btn = document.getElementById(`btn_period_${p}`);
+                if (!btn) return;
+                if (p === period) {
+                    btn.style.background = 'var(--primary-glow)';
+                    btn.style.color = 'white';
+                    btn.style.boxShadow = '0 2px 6px rgba(99, 102, 241, 0.2)';
+                } else {
+                    btn.style.background = 'none';
+                    btn.style.color = 'var(--muted-text)';
+                    btn.style.boxShadow = 'none';
+                }
+            });
+            
+            const labelMap = {
+                'days': "Kunlar bo'yicha yangi obunachilar",
+                'weeks': "Haftalar bo'yicha yangi obunachilar",
+                'months': "Oylar bo'yicha yangi obunachilar",
+                'years': "Yillar bo'yicha yangi obunachilar"
+            };
+            document.getElementById('chart_title').innerText = labelMap[period] || "Yangi obunachilar";
+            
+            fetch(`/api/subscribers-analytics?period=${period}`)
+            .then(res => res.json())
+            .then(data => {
+                subscribersAnalyticsData = data;
+                renderAnalyticsData(data, true);
+            })
+            .catch(err => {
+                alert("Obunachilar tahlilini yuklashda xatolik: " + err);
+            });
+        }
+
+        function renderAnalyticsData(data, isSubsMode = false) {
+            if (isSubsMode) {
+                document.getElementById('kpi_total_revenue').innerText = data.total_revenue;
+                document.getElementById('kpi_avg_check').innerText = data.avg_check;
+                document.getElementById('kpi_growth').innerText = data.growth_rate;
+                document.getElementById('kpi_transactions').innerText = data.total_transactions;
+            } else {
+                document.getElementById('kpi_total_revenue').innerText = formatCurrency(data.total_revenue);
+                document.getElementById('kpi_avg_check').innerText = formatCurrency(data.avg_check);
+                document.getElementById('kpi_growth').innerText = (data.growth_rate >= 0 ? "+" : "") + data.growth_rate.toFixed(1) + "%";
+                document.getElementById('kpi_transactions').innerText = data.total_transactions;
+            }
+
+            // Chart
+            const chartLabels = Object.keys(data.monthly_sales);
+            const chartValues = Object.values(data.monthly_sales);
+            initAnalyticsCharts(chartLabels, chartValues, isSubsMode ? "A'zolar soni" : "Savdo hajmi (so'm)");
+
+            // Product/Plan ranking list
+            const prodContainer = document.getElementById('product_ranking_container');
+            prodContainer.innerHTML = '';
+            
+            if (!data.product_ranking || data.product_ranking.length === 0) {
+                prodContainer.innerHTML = `<p style="color: var(--muted-text); font-size: 0.9rem;">Ma'lumotlar topilmadi.</p>`;
+            } else {
+                const maxVal = Math.max(...data.product_ranking.map(p => isSubsMode ? p.quantity : p.revenue));
+                
+                const colors = [
+                    ['#10b981', '#059669'], // Green
+                    ['#6366f1', '#4f46e5'], // Blue
+                    ['#f59e0b', '#d97706'], // Orange
+                    ['#a855f7', '#8b5cf6'], // Purple
+                    ['#6b7280', '#4b5563']  // Gray
+                ];
+
+                data.product_ranking.forEach((prod, index) => {
+                    const widthPct = maxVal > 0 ? ((isSubsMode ? prod.quantity : prod.revenue) / maxVal * 100) : 0;
+                    const gradColors = colors[index % colors.length];
+                    
+                    const labelText = isSubsMode 
+                        ? `${prod.quantity} ta obunachi` 
+                        : `${prod.quantity} dona | <strong style="color: white;">${formatCurrency(prod.revenue)} so'm</strong>`;
+
+                    const itemHtml = `
+                        <div>
+                            <div style="display: flex; justify-content: space-between; font-size: 0.95rem; margin-bottom: 6px;">
+                                <span style="font-weight: 600;">${prod.name}</span>
+                                <span style="color: var(--muted-text); font-size: 0.85rem;">${labelText}</span>
+                            </div>
+                            <div style="height: 10px; background: rgba(255,255,255,0.05); border-radius: 5px; overflow: hidden;">
+                                <div style="width: ${widthPct}%; height: 100%; background: linear-gradient(90deg, ${gradColors[0]}, ${gradColors[1]}); border-radius: 5px;"></div>
+                            </div>
+                        </div>
+                    `;
+                    prodContainer.insertAdjacentHTML('beforeend', itemHtml);
+                });
+            }
+
+            // City splits
+            const cityContainer = document.getElementById('city_distribution_container');
+            cityContainer.innerHTML = '';
+            
+            const cityColors = ['#10b981', '#6366f1', '#f59e0b', '#a855f7', '#ec4899'];
+            data.city_distribution.forEach((city, index) => {
+                const col = cityColors[index % cityColors.length];
+                const itemHtml = `
+                    <div style="display: flex; justify-content: space-between; font-size: 0.95rem;">
+                        <span style="display: flex; align-items: center; gap: 8px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: ${col}; display: inline-block;"></span> ${city.name}</span>
+                        <span style="font-weight: 600;">${city.percentage}%</span>
+                    </div>
+                `;
+                cityContainer.insertAdjacentHTML('beforeend', itemHtml);
+            });
+
+            // Payment splits
+            const payContainer = document.getElementById('payment_distribution_container');
+            payContainer.innerHTML = '';
+            
+            const payColors = ['#10b981', '#a855f7', '#6366f1'];
+            data.payment_distribution.forEach((pay, index) => {
+                const col = payColors[index % payColors.length];
+                const itemHtml = `
+                    <div style="display: flex; justify-content: space-between; font-size: 0.95rem;">
+                        <span style="display: flex; align-items: center; gap: 8px;"><span style="width: 10px; height: 10px; border-radius: 50%; background: ${col}; display: inline-block;"></span> ${pay.name}</span>
+                        <span style="font-weight: 600;">${pay.percentage}%</span>
+                    </div>
+                `;
+                payContainer.insertAdjacentHTML('beforeend', itemHtml);
+            });
+            
+            // Update payment note text
+            if (isSubsMode) {
+                document.getElementById('payment_note').innerText = `💡 Foydalanuvchilarning obuna statusi taqsimoti.`;
+            } else {
+                const cardPct = data.payment_distribution.find(p => p.name.toLowerCase().includes('kart') || p.name.toLowerCase().includes('card'));
+                const noteEl = document.getElementById('payment_note');
+                if (cardPct) {
+                    noteEl.innerText = `💡 Karta ulushi: ${cardPct.percentage}% — To'lov turlari bo'yicha tahliliy ko'rsatkich.`;
+                } else {
+                    noteEl.innerText = `💡 To'lov turlari bo'yicha tahliliy ko'rsatkich.`;
+                }
+            }
+        }
+
+        // AJAX API Save Settings
+        function saveSettings() {
+            const freeTrialDays = document.getElementById('setting_free_trial_days').value;
+            const freeTrialLimit = document.getElementById('setting_free_trial_limit').value;
+            const freeTrialRows = document.getElementById('setting_free_trial_rows').value;
+            const adminTelegramId = document.getElementById('setting_admin_telegram_id').value;
+            const standardPrice = document.getElementById('setting_standard_price').value;
+            const standardPriceYearly = document.getElementById('setting_standard_price_yearly').value;
+            const standardLimit = document.getElementById('setting_standard_limit').value;
+            const standardRows = document.getElementById('setting_standard_rows').value;
+            const premiumPrice = document.getElementById('setting_premium_price').value;
+            const premiumPriceYearly = document.getElementById('setting_premium_price_yearly').value;
+            const premiumLimit = document.getElementById('setting_premium_limit').value;
+            const premiumRows = document.getElementById('setting_premium_rows').value;
+            const proPrice = document.getElementById('setting_pro_price').value;
+            const proPriceYearly = document.getElementById('setting_pro_price_yearly').value;
+            const telegramBotToken = document.getElementById('setting_telegram_bot_token').value;
+            const geminiApiKey = document.getElementById('setting_gemini_api_key').value;
+            const dashboardUsername = document.getElementById('setting_dashboard_username').value;
+            const dashboardPassword = document.getElementById('setting_dashboard_password').value;
+
+            const payload = {
+                free_trial_days: freeTrialDays,
+                free_trial_limit: freeTrialLimit,
+                free_trial_rows: freeTrialRows,
+                admin_telegram_id: adminTelegramId,
+                standard_price: standardPrice,
+                standard_price_yearly: standardPriceYearly,
+                standard_limit: standardLimit,
+                standard_rows: standardRows,
+                premium_price: premiumPrice,
+                premium_price_yearly: premiumPriceYearly,
+                premium_limit: premiumLimit,
+                premium_rows: premiumRows,
+                pro_price: proPrice,
+                pro_price_yearly: proPriceYearly,
+                telegram_bot_token: telegramBotToken,
+                gemini_api_key: geminiApiKey,
+                dashboard_username: dashboardUsername,
+                dashboard_password: dashboardPassword
+            };
+
+            fetch('/api/settings', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    const toast = document.getElementById('toast_notification');
+                    toast.innerText = data.message;
+                    toast.classList.add('show');
+                    setTimeout(() => {
+                        toast.classList.remove('show');
+                    }, 4000);
+                } else {
+                    alert('Xatolik: ' + data.message);
+                }
+            })
+            .catch(err => {
+                alert('Serverga ulanishda xatolik yuz berdi: ' + err);
+            });
+        }
+    </script>
+</body>
+</html>

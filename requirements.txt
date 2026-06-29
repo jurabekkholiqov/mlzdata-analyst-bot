@@ -1,0 +1,9 @@
+pytelegrambotapi
+google-genai
+pandas
+openpyxl
+matplotlib
+seaborn
+python-dotenv
+flask
+
