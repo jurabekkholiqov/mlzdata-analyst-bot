@@ -1208,19 +1208,22 @@ def handle_callback_query(call):
                 
                 n_unique = plot_df[x_col].nunique()
                 if n_unique > 15:
-                    plot_df.set_index(x_col, inplace=True)
+                    # FIX: Use groupby instead of set_index+resample to avoid "already exists" error
+                    plot_df['_period'] = plot_df[x_col].dt.to_period('M').dt.to_timestamp()
                     if is_num_y:
-                        plot_data = plot_df[y_col].resample('ME').sum().reset_index()
+                        plot_data = plot_df.groupby('_period')[y_col].sum().reset_index()
+                        plot_data.rename(columns={'_period': x_col}, inplace=True)
                     else:
-                        plot_data = plot_df.resample('ME').size().reset_index(name='Soni')
+                        plot_data = plot_df.groupby('_period').size().reset_index(name='Soni')
+                        plot_data.rename(columns={'_period': x_col}, inplace=True)
                         y_col = 'Soni'
-                    plot_data[x_col] = plot_data[x_col].dt.strftime("%Y-%m")
+                    plot_data[x_col] = pd.to_datetime(plot_data[x_col]).dt.strftime("%Y-%m")
                 else:
                     plot_df = plot_df.sort_values(by=x_col)
                     if is_num_y:
-                        plot_data = plot_df.groupby(x_col)[y_col].sum().reset_index()
+                        plot_data = plot_df.groupby(x_col, sort=False)[y_col].sum().reset_index()
                     else:
-                        plot_data = plot_df.groupby(x_col).size().reset_index(name='Soni')
+                        plot_data = plot_df.groupby(x_col, sort=False).size().reset_index(name='Soni')
                         y_col = 'Soni'
                     plot_data[x_col] = pd.to_datetime(plot_data[x_col]).dt.strftime("%Y-%m-%d")
                 
@@ -1323,7 +1326,13 @@ def handle_callback_query(call):
             database.log_query(user_id, f"Grafik: {ctype}", True)
         except Exception as e:
             logger.error(f"Callback generate chart error: {e}")
-            bot.send_message(user_id, f"❌ Grafik chizishda xatolik yuz berdi: {str(e)}")
+            bot.send_message(user_id,
+                "❌ Grafik chizishda xatolik yuz berdi.\n\n"
+                "Iltimos:\n"
+                "• Boshqa grafik turi tanlang (chiziqli yoki ustunli)\n"
+                "• Yoki boshqa X/Y ustunlarni tanlang\n"
+                "• Muammo davom etsa, faylni qayta yuklang"
+            )
             
     elif call.data.startswith("date_select_"):
         try:
@@ -2161,19 +2170,22 @@ def handle_draw_chart_request(user_id, ctype=None, x_col=None, y_col=None):
             
             n_unique = plot_df[x_col].nunique()
             if n_unique > 15:
-                plot_df.set_index(x_col, inplace=True)
+                # FIX: Use groupby instead of set_index+resample to avoid "already exists" error
+                plot_df['_period'] = plot_df[x_col].dt.to_period('M').dt.to_timestamp()
                 if is_num_y:
-                    plot_data = plot_df[y_col].resample('ME').sum().reset_index()
+                    plot_data = plot_df.groupby('_period')[y_col].sum().reset_index()
+                    plot_data.rename(columns={'_period': x_col}, inplace=True)
                 else:
-                    plot_data = plot_df.resample('ME').size().reset_index(name='Soni')
+                    plot_data = plot_df.groupby('_period').size().reset_index(name='Soni')
+                    plot_data.rename(columns={'_period': x_col}, inplace=True)
                     y_col = 'Soni'
-                plot_data[x_col] = plot_data[x_col].dt.strftime("%Y-%m")
+                plot_data[x_col] = pd.to_datetime(plot_data[x_col]).dt.strftime("%Y-%m")
             else:
                 plot_df = plot_df.sort_values(by=x_col)
                 if is_num_y:
-                    plot_data = plot_df.groupby(x_col)[y_col].sum().reset_index()
+                    plot_data = plot_df.groupby(x_col, sort=False)[y_col].sum().reset_index()
                 else:
-                    plot_data = plot_df.groupby(x_col).size().reset_index(name='Soni')
+                    plot_data = plot_df.groupby(x_col, sort=False).size().reset_index(name='Soni')
                     y_col = 'Soni'
                 plot_data[x_col] = pd.to_datetime(plot_data[x_col]).dt.strftime("%Y-%m-%d")
             

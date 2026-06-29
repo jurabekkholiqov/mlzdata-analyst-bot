@@ -402,11 +402,25 @@ Grafik chizish so'ralganda quyidagi professional vizualizatsiya qoidalariga qat'
 3. **Massiv Outlierlar va Shkalalar (Scale Flattening)**:
    - Agarda ma'lumotlarda keskin farq qiluvchi bitta ulkan toifa bo'lsa (masalan, outlier qiymat 1e16, boshqa qiymatlar esa 100), oddiy chiziqli shkalali bar/line grafik chizish barcha boshqa guruhlarni mutlaqo yassi (flat) va ko'rinmas qilib qo'yadi.
    - Bunday holda, doim logarifmik shkalani yoqing: `plt.yscale('log')` (yoki gorizontal bar bo'lsa `plt.xscale('log')`). Logarifmik shkala barcha kichik ustunlarni ham chiroyli ko'rsatadi.
-4. **Grafik bezagi**:
+4. **KRITIK: set_index() TAQIQLANGAN!**
+   - `df.set_index(col)` yoki `df.set_index(col, inplace=True)` HECH QACHON ishlatmang!
+   - Bu "cannot insert [col], already exists" xatosiga olib keladi.
+   - Buning o'rniga DOIM groupby() ishlatmang:
+   ```python
+   # NOTO'G'RI (TAQIQLANGAN):
+   df.set_index('Date', inplace=True)
+   result = df['Sales'].resample('M').sum().reset_index()
+   
+   # TO'G'RI:
+   df['_period'] = pd.to_datetime(df['Date']).dt.to_period('M').dt.to_timestamp()
+   result = df.groupby('_period')['Sales'].sum().reset_index()
+   result.rename(columns={'_period': 'Date'}, inplace=True)
+   ```
+5. **Grafik bezagi**:
    - Sarlavha va o'q nomlarini {language} tilida yozing.
    - Agarda X o'qidagi yozuvlar 5 tadan ko'p bo'lsa, ularni 45 darajaga burib yozing: `plt.xticks(rotation=45, ha='right')`.
    - Har safar grafik chizilgach, rasmni saqlashdan oldin `plt.tight_layout()` chaqiring.
-5. Grafikni 'plot_1.png', 'plot_2.png' nomlari bilan saqlang va har doim `plt.close()` bilan yoping.
+6. Grafikni 'plot_1.png', 'plot_2.png' nomlari bilan saqlang va har doim `plt.close()` bilan yoping.
 
 3.5 ILG'OR BIZNES TAHLILLAR (RFM, ABC TAHLIL, PROGNOZ)
 ──────────────────────────────────────────────────────
