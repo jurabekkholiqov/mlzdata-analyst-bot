@@ -24,6 +24,26 @@ TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 GEMINI_KEY = os.getenv("GEMINI_API_KEY")
 ADMIN_ID = os.getenv("ADMIN_TELEGRAM_ID")
 
+# Click to'lov tizimi
+CLICK_SERVICE_ID = os.getenv("CLICK_SERVICE_ID", "")
+CLICK_MERCHANT_ID = os.getenv("CLICK_MERCHANT_ID", "")
+CLICK_SECRET_KEY = os.getenv("CLICK_SECRET_KEY", "")
+
+def create_click_url(user_id: int, amount_som: int, plan: str, months: int = 1) -> str:
+    """Click to'lov havolasini yaratadi"""
+    if not CLICK_SERVICE_ID or not CLICK_MERCHANT_ID:
+        return ""
+    param = f"{user_id}_{plan}_{months}oy"
+    amount_tiyin = amount_som * 100
+    return (
+        f"https://my.click.uz/services/pay"
+        f"?service_id={CLICK_SERVICE_ID}"
+        f"&merchant_id={CLICK_MERCHANT_ID}"
+        f"&amount={amount_tiyin}"
+        f"&transaction_param={param}"
+        f"&return_url=https://t.me/MlzData_bot"
+    )
+
 if not TOKEN or TOKEN == "YOUR_TELEGRAM_BOT_TOKEN":
     logger.warning("TELEGRAM_BOT_TOKEN o'rnatilmagan. Iltimos, .env faylini tahrirlang.")
 if not GEMINI_KEY or GEMINI_KEY == "YOUR_GEMINI_API_KEY":
@@ -896,8 +916,42 @@ def handle_callback_query(call):
     elif call.data in ["btn_buy_std", "btn_buy_prem", "btn_buy_pro"]:
         try:
             bot.answer_callback_query(call.id)
-            admin_contact = database.get_setting("admin_contact", "@MlzDataAdmin")
-            bot.send_message(user_id, f"Faollashtirish uchun adminga murojaat: {admin_contact}")
+            plan_map = {
+                "btn_buy_std":  ("standard", "💎 Standard",  29000,  "29,000"),
+                "btn_buy_prem": ("premium",  "🚀 Premium",   59000,  "59,000"),
+                "btn_buy_pro":  ("pro",      "👑 Pro",       99000,  "99,000"),
+            }
+            plan_key, plan_label, price_som, price_str = plan_map[call.data]
+            price_yr = price_som * 10  # 10 oy narxi = 12 oy (2 oy bepul)
+
+            url_1oy  = create_click_url(user_id, price_som, plan_key, 1)
+            url_1yil = create_click_url(user_id, price_yr,  plan_key, 12)
+
+            markup = telebot.types.InlineKeyboardMarkup(row_width=1)
+            if url_1oy:
+                markup.add(
+                    telebot.types.InlineKeyboardButton(
+                        f"💳 1 oylik to'lov — {price_str} so'm", url=url_1oy),
+                    telebot.types.InlineKeyboardButton(
+                        f"📅 Yillik to'lov — {price_yr//1000:,}K so'm (2 oy bepul)", url=url_1yil),
+                )
+                msg = (
+                    f"✅ {plan_label} tarifi uchun to'lov\n\n"
+                    f"Oylik: <b>{price_str} so'm</b>\n"
+                    f"Yillik: <b>{price_yr//1000:,},000 so'm</b> (2 oy bepul 🎁)\n\n"
+                    f"To'lov tugmasini bosing — Click orqali xavfsiz to'lang:"
+                )
+            else:
+                # Click sozlanmagan bo'lsa — adminga murojaat
+                admin_contact = database.get_setting("admin_contact", "@MlzDataAdmin")
+                markup.add(telebot.types.InlineKeyboardButton(
+                    "📩 Adminga yozish", url=f"https://t.me/{admin_contact.lstrip('@')}"))
+                msg = (
+                    f"✅ {plan_label} — {price_str} so'm/oy\n\n"
+                    f"To'lov tizimi sozlanmoqda.\n"
+                    f"Hozircha adminga murojaat qiling: {admin_contact}"
+                )
+            bot.send_message(user_id, msg, parse_mode="HTML", reply_markup=markup)
         except Exception as e:
             logger.error(f"Callback buy error: {e}")
             
@@ -1763,7 +1817,30 @@ def show_plan_details(user_id, plan, lang='uz'):
                 f"📊 Your remaining trial period: **{rem} days**."
             )
             
-    bot.send_message(user_id, text, parse_mode="Markdown")
+    # Click to'lov tugmalari (trial rejimida ko'rsatilmaydi)
+    markup = None
+    if plan != 'trial':
+        price_map = {
+            'standard': (29000,  "29,000",  "standard"),
+            'premium':  (59000,  "59,000",  "premium"),
+            'pro':      (99000,  "99,000",  "pro"),
+        }
+        if plan in price_map:
+            p_som, p_str, p_key = price_map[plan]
+            p_yr = p_som * 10
+            url_1oy  = create_click_url(user_id, p_som, p_key, 1)
+            url_1yil = create_click_url(user_id, p_yr,  p_key, 12)
+            if url_1oy:
+                markup = telebot.types.InlineKeyboardMarkup(row_width=1)
+                markup.add(
+                    telebot.types.InlineKeyboardButton(
+                        f"💳 1 oylik Click to'lov — {p_str} so'm", url=url_1oy),
+                    telebot.types.InlineKeyboardButton(
+                        f"📅 1 yillik Click to'lov — {p_yr//1000:,}K so'm", url=url_1yil),
+                )
+
+    bot.send_message(user_id, text, parse_mode="Markdown",
+                     reply_markup=markup if markup else telebot.types.ReplyKeyboardRemove())
 
 
 def map_technical_error(e, action="Tahlil qilishda"):
@@ -2487,35 +2564,48 @@ def handle_data_cleaning_request(user_id):
             
         df = analyzer.load_file(file_path)
         
-        missing_count = df.isnull().sum().sum()
         duplicate_count = df.duplicated().sum()
-        
-        null_cols = df.columns[df.isnull().any()].tolist()
-        null_cols_str = ", ".join(null_cols[:3]) if null_cols else "Sog'lom"
-        if len(null_cols) > 3:
-            null_cols_str += "..."
-            
-        format_error_count = 0
-        for col in df.columns:
-            if df[col].dtype == object:
-                cleaned_nums = pd.to_numeric(df[col].astype(str).str.replace(r'[^\d.]', '', regex=True), errors='coerce')
-                nulls_before = df[col].isnull().sum()
-                nulls_after = cleaned_nums.isnull().sum()
-                if nulls_after > nulls_before:
-                    format_error_count += (nulls_after - nulls_before)
-                    
         old_rows = df.shape[0]
+
+        # Bo'sh kataklar — ustun bo'yicha (katak emas, ustun soni)
+        null_by_col = df.isnull().sum()
+        null_by_col = null_by_col[null_by_col > 0]
+        if len(null_by_col) > 0:
+            null_lines = []
+            for col, cnt in null_by_col.items():
+                null_lines.append(f"  • {col}: {cnt} ta bo'sh")
+            null_str = "\n".join(null_lines[:5])
+            if len(null_by_col) > 5:
+                null_str += f"\n  • ... va yana {len(null_by_col)-5} ta ustun"
+            null_total = int(null_by_col.sum())
+        else:
+            null_str = "  • Bo'sh katak topilmadi ✅"
+            null_total = 0
+
+        # Noto'g'ri format — QATOR bo'yicha hisoblash (katak emas)
+        format_error_rows = set()
+        for col in df.select_dtypes(include=['object']).columns:
+            cleaned = pd.to_numeric(
+                df[col].astype(str).str.replace(r'[^\d.]', '', regex=True),
+                errors='coerce')
+            bad_idx = cleaned[cleaned.isna() & df[col].notna()].index
+            # Agar 90% dan ko'p to'g'ri emas bo'lsa — bu matnli ustun, skip
+            if len(bad_idx) < len(df) * 0.5:
+                format_error_rows.update(bad_idx.tolist())
+        format_error_count = len(format_error_rows)
+
         df_cleaned = df.drop_duplicates()
         yangi_rows = df_cleaned.shape[0]
-        
+
         summary_msg = (
             "🔍 <b>TOZALASH TAHLILI</b>\n"
             "━━━━━━━━━━━━━━━━━━\n\n"
             "Faylingizda quyidagi muammolar topildi:\n\n"
-            f"❌ Dublikatlar: {duplicate_count} ta qator\n"
-            f"⚠️ Bo'sh kataklar: {missing_count} ta ({null_cols_str})\n"
-            f"🔢 Noto'g'ri format: {format_error_count} ta\n\n"
-            f"Natija: {old_rows} → {yangi_rows} ta qator\n\n"
+            f"❌ <b>Dublikat qatorlar:</b> {duplicate_count} ta\n"
+            f"⚠️ <b>Bo'sh kataklar:</b> {null_total} ta\n"
+            f"{null_str}\n"
+            f"🔢 <b>Noto'g'ri format (raqamda matn):</b> {format_error_count} ta qator\n\n"
+            f"Natija: {old_rows} → {yangi_rows} ta sof qator\n\n"
             "Barchasini tozalayman?"
         )
         
@@ -2821,33 +2911,43 @@ def send_daily_reminders():
             except:
                 pass
                 
+        # Tarifga qarab narx va plan
+        plan_prices = {"standard": 29000, "premium": 59000, "pro": 99000}
+        p_som = plan_prices.get(sub_type, 29000)
+        p_str = f"{p_som:,}".replace(",", " ")
+        renew_url = create_click_url(user_id, p_som, sub_type, 1)
+
         # 1. OBUNA TUGASHIDAN 3 KUN OLDIN
         if sub_type in ['standard', 'premium', 'pro'] and rem == 3:
             if not database.has_sent_reminder(user_id, "sub_3_days_left"):
                 try:
                     markup = telebot.types.InlineKeyboardMarkup()
-                    markup.add(telebot.types.InlineKeyboardButton("💳 Yangilash", callback_data="btn_renew_sub"))
-                    msg = f"⏰ Obunangiz <b>{sub_date_str}</b> da tugaydi — 3 kun qoldi!\nUzilmaslik uchun hozir yangilang 👇"
+                    if renew_url:
+                        markup.add(telebot.types.InlineKeyboardButton(
+                            f"💳 Yangilash — {p_str} so'm", url=renew_url))
+                    else:
+                        markup.add(telebot.types.InlineKeyboardButton(
+                            "💳 Yangilash", callback_data="btn_renew_sub"))
+                    msg = (f"⏰ Obunangiz <b>{sub_date_str}</b> da tugaydi — 3 kun qoldi!\n"
+                           f"Uzilmaslik uchun hozir yangilang 👇")
                     bot.send_message(user_id, msg, parse_mode="HTML", reply_markup=markup)
                     database.log_sent_reminder(user_id, "sub_3_days_left")
                 except Exception as e:
                     logger.error(f"Reminder 3 days error: {e}")
-                    
+
         # 2. OBUNA TUGASHIDAN 1 KUN OLDIN
         elif sub_type in ['standard', 'premium', 'pro'] and rem == 1:
             if not database.has_sent_reminder(user_id, "sub_1_day_left"):
                 try:
-                    price_str = "0"
-                    if sub_type == 'standard':
-                        price_str = database.get_setting("standard_price", "29,000")
-                    elif sub_type == 'premium':
-                        price_str = database.get_setting("premium_price", "59,000")
-                    elif sub_type == 'pro':
-                        price_str = database.get_setting("pro_price", "99,000")
-                        
                     markup = telebot.types.InlineKeyboardMarkup()
-                    markup.add(telebot.types.InlineKeyboardButton(f"💳 Hozir yangilash — {price_str} so'm", callback_data="btn_renew_sub"))
-                    msg = "🔴 Ertaga obunangiz tugaydi!\nBugun yangilamasangiz — tahlil imkoniyatingiz to'xtatiladi."
+                    if renew_url:
+                        markup.add(telebot.types.InlineKeyboardButton(
+                            f"💳 Hozir yangilash — {p_str} so'm", url=renew_url))
+                    else:
+                        markup.add(telebot.types.InlineKeyboardButton(
+                            f"💳 Hozir yangilash", callback_data="btn_renew_sub"))
+                    msg = ("🔴 Ertaga obunangiz tugaydi!\n"
+                           "Bugun yangilamasangiz — tahlil imkoniyatingiz to'xtatiladi.")
                     bot.send_message(user_id, msg, parse_mode="HTML", reply_markup=markup)
                     database.log_sent_reminder(user_id, "sub_1_day_left")
                 except Exception as e:
@@ -2882,12 +2982,28 @@ def send_daily_reminders():
             if not database.has_sent_reminder(user_id, "trial_2_days_left"):
                 try:
                     fayl_soni = database.get_user_total_files(user_id)
+                    # 20% chegirma bilan Click URL
+                    std_url  = create_click_url(user_id, 23200, 'standard', 1)  # 29000 * 0.8
+                    prem_url = create_click_url(user_id, 47200, 'premium',  1)  # 59000 * 0.8
                     markup = telebot.types.InlineKeyboardMarkup(row_width=1)
-                    markup.add(
-                        telebot.types.InlineKeyboardButton("💎 Standard — 29,000 so'm/oy ← Eng mashhur", callback_data="btn_buy_std"),
-                        telebot.types.InlineKeyboardButton("🚀 Premium — 59,000 so'm/oy", callback_data="btn_buy_prem")
-                    )
-                    msg = f"🎁 Bepul sinov muddatingiz <b>{trial_date_str}</b> da tugaydi — 2 kun qoldi!\nSiz {fayl_soni} ta fayl tahlil qildingiz.\nDavom etish uchun obuna bo'ling:"
+                    if std_url:
+                        markup.add(
+                            telebot.types.InlineKeyboardButton(
+                                "💎 Standard — 23,200 so'm (20% chegirma!) ← Eng mashhur", url=std_url),
+                            telebot.types.InlineKeyboardButton(
+                                "🚀 Premium — 47,200 so'm (20% chegirma!)", url=prem_url),
+                        )
+                    else:
+                        markup.add(
+                            telebot.types.InlineKeyboardButton(
+                                "💎 Standard — 29,000 so'm/oy ← Eng mashhur", callback_data="btn_buy_std"),
+                            telebot.types.InlineKeyboardButton(
+                                "🚀 Premium — 59,000 so'm/oy", callback_data="btn_buy_prem"),
+                        )
+                    discount_text = " — <b>20% chegirma faqat bugun!</b> 🎁" if std_url else ""
+                    msg = (f"🎁 Bepul sinov muddatingiz <b>{trial_date_str}</b> da tugaydi — 2 kun qoldi!\n"
+                           f"Siz {fayl_soni} ta fayl tahlil qildingiz.\n"
+                           f"Davom etish uchun obuna bo'ling{discount_text}:")
                     bot.send_message(user_id, msg, parse_mode="HTML", reply_markup=markup)
                     database.log_sent_reminder(user_id, "trial_2_days_left")
                 except Exception as e:
